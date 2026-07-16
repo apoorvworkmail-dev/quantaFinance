@@ -1,0 +1,21 @@
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { AIChatBot } from "./AIChatBot";
+
+export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? (
+    <>
+      {children}
+      <AIChatBot />
+    </>
+  ) : (
+    <Navigate to="/login" replace />
+  );
+};
+
+export const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
+};

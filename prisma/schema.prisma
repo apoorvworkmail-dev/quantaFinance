@@ -1,0 +1,167 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  phoneNumber   String?
+  profilePic    String? // Path to uploaded profile picture
+  role          String         @default("customer") // customer, teller, admin
+  status        String         @default("active") // active, suspended, pending_kyc, verified
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  auditLogs     AuditLog[]
+  beneficiaries Beneficiary[]
+  refreshTokens RefreshToken[]
+  loginHistory  LoginHistory[]
+  otps          OTP[]
+  loans         Loan[]
+  fixedDeposits FixedDeposit[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  userAgent String?
+  device    String?
+  status    String // success, failed
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                   String        @id @default(uuid())
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountNumber        String        @unique
+  accountType          String        @default("checking") // checking, savings, salary, loan
+  balance              Decimal       @default(0.0)
+  currency             String        @default("USD")
+  status               String        @default("active") // active, frozen, closed
+  ifscCode             String?       @default("QB0001000")
+  branch               String?       @default("Main Branch")
+  dailyTransferLimit   Decimal       @default(50000.0)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  cards                Card[]
+  sentTransactions     Transaction[] @relation("SentTransactions")
+  receivedTransactions Transaction[] @relation("ReceivedTransactions")
+}
+
+model Transaction {
+  id                   String    @id @default(uuid())
+  sourceAccountId      String?
+  sourceAccount        Account?  @relation("SentTransactions", fields: [sourceAccountId], references: [id], onDelete: SetNull)
+  destinationAccountId String?
+  destinationAccount   Account?  @relation("ReceivedTransactions", fields: [destinationAccountId], references: [id], onDelete: SetNull)
+  amount               Decimal
+  currency             String    @default("USD")
+  transactionType      String // transfer, deposit, withdrawal, bill_pay
+  status               String    @default("pending") // pending, completed, failed, reversed
+  referenceDescription String?
+  reversedById         String? // ID of the admin who reversed
+  reversedAt           DateTime?
+  idempotencyKey       String?   @unique
+  createdAt            DateTime  @default(now())
+}
+
+model Card {
+  id             String   @id @default(uuid())
+  accountId      String
+  account        Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  cardNumberHash String   @unique
+  cardType       String   @default("debit") // debit, credit
+  status         String   @default("active") // active, frozen, blocked
+  expiryDate     DateTime
+  dailyLimit     Decimal  @default(1000.0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  ipAddress String?
+  userAgent String?
+  metadata  String? // JSON string for extra data
+  createdAt DateTime @default(now())
+}
+
+model Beneficiary {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname      String
+  accountNumber String
+  bankName      String   @default("QuantaBank")
+  ifscCode      String?
+  status        String   @default("active") // active, inactive
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, accountNumber])
+}
+
+model OTP {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  type      String // forgot_password, transfer_otp, login_otp
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Loan {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedAccountId  String?  // ID of the account the loan funds were disbursed to
+  loanType         String   @default("personal") // personal, home, auto, education
+  principalAmount  Decimal
+  interestRate     Decimal  @default(5.0) // Annual percentage rate
+  termMonths       Int      @default(12)
+  status           String   @default("pending") // pending, approved, active, paid_off, defaulted, rejected
+  remainingBalance Decimal
+  nextPaymentDate  DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model FixedDeposit {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedAccountId String?  // ID of the account the funds were drawn from / will return to
+  principalAmount Decimal
+  interestRate    Decimal  @default(7.0) // Annual percentage rate
+  maturityDate    DateTime
+  maturityAmount  Decimal
+  status          String   @default("active") // active, matured, prematurely_closed
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
