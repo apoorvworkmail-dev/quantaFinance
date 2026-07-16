@@ -56,10 +56,34 @@ app.use(
   })
 );
 
+// Configure CORS (Must be applied before rate limiters to include CORS headers on 429 errors)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://localhost:5173",
+  "https://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || process.env.NODE_ENV === "development") {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
+
 // Brute Force & Credential Stuffing rate limits for sensitive endpoints
+const isDev = process.env.NODE_ENV === "development";
 const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 10,                  // max 10 requests per window
+  max: isDev ? 500 : 10,     // allow 500 requests per 10 mins in dev
   message: {
     status: "error",
     message: "Too many login/verification attempts from this IP. Try again in 10 minutes."
@@ -72,34 +96,13 @@ app.use("/api/v1/auth/reset-password", authLimiter);
 // General rate limiter
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 150,
+  max: isDev ? 2000 : 150,
   message: {
     status: "error",
     message: "Too many requests from this IP, please try again after 15 minutes."
   }
 });
 app.use(generalLimiter);
-
-// Configure CORS
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://localhost:5173",
-  "https://localhost:5174",
-];
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
 
 // Mount API routes
 app.use("/api/v1", healthRouter);

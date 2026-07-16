@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import api from '../api/client';
 import jsPDF from 'jspdf';
 import {
-  ArrowUpRight, ArrowDownLeft, Filter,
+  ArrowUpRight, ArrowDownLeft,
   Copy, Check, ChevronLeft, ChevronRight,
   CheckCircle, Download, X, Search, FileDown,
   ArrowUpDown, ShieldAlert,
@@ -151,7 +151,6 @@ export const TransactionsPage = () => {
     setTransferErrors({});
     setSubmitting(true); setFormError('');
     try {
-      const src = accounts.find(a => a.id === transferForm.fromAccountId);
       const res = await api.post('/transactions/transfer', {
         ...transferForm,
         amount: Number(transferForm.amount),

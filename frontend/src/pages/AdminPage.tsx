@@ -6,7 +6,7 @@ import {
   Users, Wallet, CreditCard,
   ShieldCheck, Search, Ban, CheckCircle,
   TrendingUp, AlertTriangle, Activity, X, RotateCcw,
-  UserCheck, ShieldAlert, Trash2,
+  Trash2,
 } from "lucide-react";
 
 interface Stats {

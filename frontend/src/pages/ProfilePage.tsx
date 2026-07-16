@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import api from "../api/client";
 import {
-  User, Mail, Phone, ShieldCheck, Calendar,
+  ShieldCheck,
   Wallet, CreditCard, Activity, Edit2, Save, X, Camera,
 } from "lucide-react";
 

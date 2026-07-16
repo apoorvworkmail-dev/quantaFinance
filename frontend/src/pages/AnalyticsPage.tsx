@@ -4,7 +4,7 @@ import { Skeleton } from "../components/Skeleton";
 import { useToast } from "../context/ToastContext";
 import api from "../api/client";
 import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Area, AreaChart,
 } from "recharts";
