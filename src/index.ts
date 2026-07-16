@@ -1,9 +1,7 @@
 import dotenv from "dotenv";
-import path from "path";
 
-// Load environment variables early
-dotenv.config({ path: path.join(__dirname, "../.env") });
 
+dotenv.config();
 import app from "./app";
 import prisma from "./config/db";
 
