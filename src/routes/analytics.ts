@@ -6,7 +6,7 @@ import {
   getBreakdown,
   getRecentActivity,
 } from "../controllers/analytics.controller";
-import { chatWithAssistant } from "../controllers/ai.controller";
+import { chatWithAssistant, streamChatWithAssistant } from "../controllers/ai.controller";
 
 const router = Router();
 router.use(authenticate);
@@ -16,5 +16,6 @@ router.get("/monthly",         getMonthly);
 router.get("/breakdown",       getBreakdown);
 router.get("/recent-activity", getRecentActivity);
 router.post("/chat",            chatWithAssistant);
+router.post("/chat/stream",     streamChatWithAssistant);
 
 export default router;

@@ -1,12 +1,11 @@
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { Response } from "express";
+import prisma from "../config/db";
+import { AuthRequest } from "../middleware/auth";
 
 // ── GET /analytics/summary ───────────────────────────────────────────────────
 // Returns overall financial summary for the logged-in user
-export const getSummary = async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
+export const getSummary = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
 
   try {
     // Get all user accounts
@@ -74,8 +73,8 @@ export const getSummary = async (req: Request, res: Response) => {
 
 // ── GET /analytics/monthly ───────────────────────────────────────────────────
 // Returns last 6 months of income vs expense aggregated by month
-export const getMonthly = async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
+export const getMonthly = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
 
   try {
     const accounts = await prisma.account.findMany({
@@ -145,8 +144,8 @@ export const getMonthly = async (req: Request, res: Response) => {
 
 // ── GET /analytics/breakdown ─────────────────────────────────────────────────
 // Returns transaction type breakdown (transfer vs deposit) for pie chart
-export const getBreakdown = async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
+export const getBreakdown = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
 
   try {
     const accounts = await prisma.account.findMany({
@@ -186,8 +185,8 @@ export const getBreakdown = async (req: Request, res: Response) => {
 
 // ── GET /analytics/recent-activity ──────────────────────────────────────────
 // Returns last 30 days daily balance movement
-export const getRecentActivity = async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
+export const getRecentActivity = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
 
   try {
     const accounts = await prisma.account.findMany({

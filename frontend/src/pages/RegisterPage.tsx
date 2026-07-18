@@ -12,12 +12,14 @@ export const RegisterPage = () => {
     email: "", password: "", phoneNumber: "",
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
     setLoading(true);
     try {
       await api.post("/auth/register", form);
@@ -29,7 +31,14 @@ export const RegisterPage = () => {
       login(loginRes.data.data.accessToken, loginRes.data.data.user);
       navigate("/dashboard");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      const data = err.response?.data;
+      if (data?.errors) {
+        // Show field-level validation errors from Zod
+        setFieldErrors(data.errors);
+        setError("Please fix the errors below.");
+      } else {
+        setError(data?.message || "Registration failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -104,6 +113,27 @@ export const RegisterPage = () => {
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            {/* Live requirement indicators */}
+            <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
+              {[
+                { label: "8+ chars",   ok: form.password.length >= 8 },
+                { label: "Uppercase",  ok: /[A-Z]/.test(form.password) },
+                { label: "Number",     ok: /[0-9]/.test(form.password) },
+              ].map(({ label, ok }) => (
+                <span key={label} style={{
+                  fontSize: 11, fontWeight: 600,
+                  color: ok ? "#10b981" : form.password.length > 0 ? "#ef4444" : "var(--text-muted)",
+                  display: "flex", alignItems: "center", gap: 4,
+                }}>
+                  {ok ? "✓" : "✗"} {label}
+                </span>
+              ))}
+            </div>
+            {fieldErrors.password && (
+              <p style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
+                {fieldErrors.password.join(", ")}
+              </p>
+            )}
           </div>
 
           <div style={{

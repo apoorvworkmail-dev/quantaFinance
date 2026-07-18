@@ -1,11 +1,10 @@
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { Response } from "express";
+import prisma from "../config/db";
+import { AuthRequest } from "../middleware/auth";
 
 // ── GET /beneficiaries ───────────────────────────────────────────────────────
-export const getBeneficiaries = async (req: Request, res: Response): Promise<void> => {
-  const userId = (req as any).user.id;
+export const getBeneficiaries = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
   try {
     const beneficiaries = await prisma.beneficiary.findMany({
       where: { userId },
@@ -18,8 +17,8 @@ export const getBeneficiaries = async (req: Request, res: Response): Promise<voi
 };
 
 // ── POST /beneficiaries ──────────────────────────────────────────────────────
-export const addBeneficiary = async (req: Request, res: Response): Promise<void> => {
-  const userId = (req as any).user.id;
+export const addBeneficiary = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
   const { nickname, accountNumber, bankName, ifscCode } = req.body;
 
   if (!nickname || !accountNumber) {
@@ -77,8 +76,8 @@ export const addBeneficiary = async (req: Request, res: Response): Promise<void>
 };
 
 // ── PUT /beneficiaries/:id ───────────────────────────────────────────────────
-export const updateBeneficiary = async (req: Request, res: Response): Promise<void> => {
-  const userId = (req as any).user.id;
+export const updateBeneficiary = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
   const { id } = req.params;
   const { nickname, bankName, ifscCode } = req.body;
 
@@ -104,8 +103,8 @@ export const updateBeneficiary = async (req: Request, res: Response): Promise<vo
 };
 
 // ── PATCH /beneficiaries/:id/status ─────────────────────────────────────────
-export const toggleBeneficiaryStatus = async (req: Request, res: Response): Promise<void> => {
-  const userId = (req as any).user.id;
+export const toggleBeneficiaryStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
   const { id } = req.params;
   const { status } = req.body;
 
@@ -129,8 +128,8 @@ export const toggleBeneficiaryStatus = async (req: Request, res: Response): Prom
 };
 
 // ── DELETE /beneficiaries/:id ────────────────────────────────────────────────
-export const deleteBeneficiary = async (req: Request, res: Response): Promise<void> => {
-  const userId = (req as any).user.id;
+export const deleteBeneficiary = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
   const { id } = req.params;
 
   try {
