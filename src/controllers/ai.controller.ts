@@ -132,28 +132,52 @@ INSTRUCTIONS:
         const response = await chat.sendMessage(message);
         reply = response.response.text();
         aiSuccess = true;
-      } catch (geminiError) {
-        console.warn("Gemini API Error, falling back to mock mode:", (geminiError as Error).message);
+      } catch (geminiError: any) {
+        console.error("[Gemini API Error] Falling back to rule-based mode.");
+        console.error("  Status:", geminiError?.status);
+        console.error("  Message:", geminiError?.message);
+        console.error("  Details:", JSON.stringify(geminiError?.errorDetails || geminiError?.response || {}, null, 2));
       }
+    } else {
+      console.warn("[AI Controller] No valid GEMINI_API_KEY found. Running in fallback mode.");
     }
 
     if (!aiSuccess) {
-      // Mock Response Mode Fallback
-      reply = "Hello! I am QuantaBot (Dev/Fallback Mode). The live AI is currently unavailable or unconfigured. ";
-
+      // Smart Rule-Based Fallback Mode
       const query = message.toLowerCase();
-      if (query.includes("balance") || query.includes("how much money")) {
-        const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
-        reply += `Currently, you have a total balance of $${total.toLocaleString()} across ${accounts.length} accounts. Here is the split:\n${accountsContext}`;
-      } else if (query.includes("spend") || query.includes("transaction") || query.includes("history")) {
-        reply += `Here is your recent transaction history:\n${transactionsContext}`;
-      } else if (query.includes("budget") || query.includes("save")) {
-        const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
-        reply += `Based on your balance of $${total.toLocaleString()}, I recommend keeping 50% for needs, 30% for wants, and allocating 20% ($${(
-          total * 0.2
-        ).toLocaleString()}) toward savings.`;
+      const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+      const userName = user?.firstName || "there";
+
+      if (query.includes("balance") || query.includes("how much money") || query.includes("my account")) {
+        reply = `Hi ${userName}! Here is your current account overview:\n\n${accountsContext || "No active accounts found."}\n\n**Total Balance: $${totalBalance.toLocaleString()}** across ${accounts.length} account(s).`;
+
+      } else if (query.includes("loan") || query.includes("emi") || query.includes("borrow") || query.includes("debt")) {
+        if (loans.length > 0) {
+          const totalOwed = loans.reduce((sum, l) => sum + Number(l.remainingBalance), 0);
+          reply = `Hi ${userName}! Here is your loan summary:\n\n${loansContext}\n\n**Total Remaining Debt: $${totalOwed.toLocaleString()}**\n\nTo reduce your loan burden, consider making extra principal payments when possible.`;
+        } else {
+          reply = `Good news, ${userName}! You currently have **no active loans**. If you're looking to take a loan, QuantaBank offers personal, home, and auto loan options with competitive rates. Visit our Loans section to apply.`;
+        }
+
+      } else if (query.includes("fixed deposit") || query.includes("fd") || query.includes("deposit")) {
+        if (fds.length > 0) {
+          const totalFD = fds.reduce((sum, f) => sum + Number(f.principalAmount), 0);
+          reply = `Hi ${userName}! Here are your Fixed Deposits:\n\n${fdsContext}\n\n**Total FD Principal: $${totalFD.toLocaleString()}**`;
+        } else {
+          reply = `Hi ${userName}! You currently have **no Fixed Deposits**. FDs are a great low-risk way to grow your savings. You can open one from the Fixed Deposits section of your dashboard.`;
+        }
+
+      } else if (query.includes("spend") || query.includes("transaction") || query.includes("history") || query.includes("payment")) {
+        reply = `Hi ${userName}! Here are your last 10 transactions:\n\n${transactionsContext || "No recent transactions found."}\n\nTip: Review your spending regularly to stay on budget!`;
+
+      } else if (query.includes("budget") || query.includes("save") || query.includes("saving") || query.includes("plan")) {
+        reply = `Hi ${userName}! Based on your total balance of **$${totalBalance.toLocaleString()}**, here is a suggested 50/30/20 budget plan:\n\n- 🏠 **50% Needs** (rent, bills, groceries): $${(totalBalance * 0.5).toLocaleString()}\n- 🎉 **30% Wants** (dining, entertainment): $${(totalBalance * 0.3).toLocaleString()}\n- 💰 **20% Savings/Investments**: $${(totalBalance * 0.2).toLocaleString()}\n\nWould you like more specific advice on any of these?`;
+
+      } else if (query.includes("help") || query.includes("what can you") || query.includes("feature")) {
+        reply = `Hi ${userName}! I'm **QuantaBot**, your personal finance assistant. Here's what I can help you with:\n\n- 💳 **Account Balances** — Check all your accounts\n- 📊 **Transaction History** — Review recent payments\n- 🏦 **Loan Details** — See your active loans & EMIs\n- 📈 **Fixed Deposits** — Track your FD maturity dates\n- 💡 **Budget Planning** — Get savings recommendations\n\nJust ask me anything about your finances!`;
+
       } else {
-        reply += `I see you asked about "${message}". I can help analyze your balances, read your transaction histories, or plan savings parameters. What would you like to review?`;
+        reply = `Hi ${userName}! I received your message: "${message}".\n\nI can help you with:\n- Your **account balances** ($${totalBalance.toLocaleString()} total)\n- **Transaction history** (${transactions.length} recent transactions)\n- **Loan details** (${loans.length} loan(s))\n- **Fixed deposits** (${fds.length} FD(s))\n- **Budget & savings planning**\n\nTry asking something like "What is my balance?" or "Show my loans"!`;
       }
     }
 
@@ -289,24 +313,45 @@ INSTRUCTIONS:
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
         res.end();
         return;
-      } catch (geminiError) {
-        console.warn("Gemini stream error, falling back:", (geminiError as Error).message);
+      } catch (geminiError: any) {
+        console.error("[Gemini Stream Error] Falling back to rule-based mode.");
+        console.error("  Status:", geminiError?.status);
+        console.error("  Message:", geminiError?.message);
+        console.error("  Details:", JSON.stringify(geminiError?.errorDetails || geminiError?.response || {}, null, 2));
       }
+    } else {
+      console.warn("[AI Stream] No valid GEMINI_API_KEY. Running in fallback mode.");
     }
 
-    // Fallback: mock mode — send single chunk then done
+    // Smart Rule-Based Fallback: give real, context-aware answers
     const query = message.toLowerCase();
-    let reply = "Hello! I'm QuantaBot (Fallback Mode — no GEMINI_API_KEY set). ";
-    if (query.includes("balance") || query.includes("how much money")) {
-      const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
-      reply += `You have **$${total.toLocaleString()}** across ${accounts.length} account(s).\n${accountsContext}`;
-    } else if (query.includes("spend") || query.includes("transaction")) {
-      reply += `Recent transactions:\n${transactionsContext || "None found."}`;
-    } else if (query.includes("budget") || query.includes("save")) {
-      const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
-      reply += `Based on **$${total.toLocaleString()}** balance — keep 50% needs, 30% wants, save **$${(total * 0.2).toLocaleString()}** (20%).`;
+    const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+    const userName = user?.firstName || "there";
+    let reply = "";
+
+    if (query.includes("balance") || query.includes("how much money") || query.includes("my account")) {
+      reply = `Hi ${userName}! Here is your current account overview:\n\n${accountsContext || "No active accounts found."}\n\n**Total Balance: $${totalBalance.toLocaleString()}** across ${accounts.length} account(s).`;
+    } else if (query.includes("loan") || query.includes("emi") || query.includes("borrow") || query.includes("debt")) {
+      if (loans.length > 0) {
+        const totalOwed = loans.reduce((sum, l) => sum + Number(l.remainingBalance), 0);
+        reply = `Hi ${userName}! Here is your loan summary:\n\n${loansContext}\n\n**Total Remaining Debt: $${totalOwed.toLocaleString()}**\n\nConsider making extra principal payments to reduce your burden faster.`;
+      } else {
+        reply = `Good news, ${userName}! You have **no active loans**. QuantaBank offers personal, home, and auto loans. Visit the Loans section to apply.`;
+      }
+    } else if (query.includes("fixed deposit") || query.includes("fd") || query.includes("deposit")) {
+      if (fds.length > 0) {
+        reply = `Hi ${userName}! Your Fixed Deposits:\n\n${fdsContext}`;
+      } else {
+        reply = `Hi ${userName}! You have **no Fixed Deposits** yet. FDs are a safe way to grow savings — open one from your dashboard.`;
+      }
+    } else if (query.includes("spend") || query.includes("transaction") || query.includes("history") || query.includes("payment")) {
+      reply = `Hi ${userName}! Recent transactions:\n\n${transactionsContext || "No recent transactions found."}\n\nTip: Track spending regularly to stay on budget!`;
+    } else if (query.includes("budget") || query.includes("save") || query.includes("saving") || query.includes("plan")) {
+      reply = `Hi ${userName}! Suggested 50/30/20 plan for **$${totalBalance.toLocaleString()}**:\n\n- 🏠 **Needs (50%)**: $${(totalBalance * 0.5).toLocaleString()}\n- 🎉 **Wants (30%)**: $${(totalBalance * 0.3).toLocaleString()}\n- 💰 **Savings (20%)**: $${(totalBalance * 0.2).toLocaleString()}`;
+    } else if (query.includes("help") || query.includes("what can you")) {
+      reply = `Hi ${userName}! I'm **QuantaBot**. Ask me about:\n- 💳 Account balances\n- 📊 Transaction history\n- 🏦 Loan details\n- 📈 Fixed deposits\n- 💡 Budget planning`;
     } else {
-      reply += `Ask me about your balance, transactions, savings, loans, or fixed deposits!`;
+      reply = `Hi ${userName}! You asked: "${message}".\n\nQuick summary:\n- 💳 Total balance: **$${totalBalance.toLocaleString()}**\n- 📊 Recent transactions: **${transactions.length}**\n- 🏦 Active loans: **${loans.length}**\n- 📈 Fixed deposits: **${fds.length}**\n\nAsk me anything about your finances!`;
     }
 
     res.write(`data: ${JSON.stringify({ chunk: reply })}\n\n`);
